@@ -12,6 +12,13 @@ function fal() {
   return client;
 }
 
+/** Ask fal about one request (admin debugging). */
+export async function falRequestInfo(endpoint: string, requestId: string) {
+  const status = await fal().queue.status(endpoint, { requestId, logs: true }).catch((e) => ({ error: errorText(e) }));
+  const result = await fal().queue.result(endpoint, { requestId }).then((r) => r.data).catch((e) => ({ error: errorText(e) }));
+  return { status, result };
+}
+
 /** Longest any call to these models should take, queue time included. */
 const TIMEOUT_MS: Record<string, number> = { video: 240_000, segment: 90_000 };
 
