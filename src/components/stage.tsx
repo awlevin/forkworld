@@ -197,14 +197,17 @@ export function Stage(props: {
   );
 }
 
+/** The tapped object's name sits just above it; with "Show things" on, every name sits on its object. */
 function Label({ object, subtle }: { object: SceneObject; subtle?: boolean }) {
-  const [x, y, w] = object.bbox;
+  const [x, y, w, h] = object.bbox;
   const cx = Math.min(0.85, Math.max(0.15, x + w / 2));
-  const top = Math.max(0.04, y);
+  const top = subtle ? y + h / 2 : Math.max(0.04, y);
   return (
     <span
-      className={`pointer-events-none absolute max-w-[60%] -translate-x-1/2 -translate-y-[120%] truncate rounded-full px-2.5 py-1 font-medium backdrop-blur-md ${
-        subtle ? "bg-black/45 text-[11px] text-paper/85" : "bg-black/70 text-xs text-glow ring-1 ring-glow/50"
+      className={`pointer-events-none absolute max-w-[45%] -translate-x-1/2 truncate rounded-full font-medium backdrop-blur-md ${
+        subtle
+          ? "-translate-y-1/2 bg-black/50 px-2 py-0.5 text-[10px] text-paper/90"
+          : "-translate-y-[120%] bg-black/70 px-2.5 py-1 text-xs text-glow ring-1 ring-glow/50"
       }`}
       style={{ left: `${cx * 100}%`, top: `${top * 100}%` }}
     >

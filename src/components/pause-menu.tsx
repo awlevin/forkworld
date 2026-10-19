@@ -41,13 +41,14 @@ export function PauseMenu(props: {
   onClose: () => void;
 }) {
   const [costs, setCosts] = useState<Costs | null>(null);
+  const [costError, setCostError] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch(`/api/costs?sceneId=${props.sceneId}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setCosts)
-      .catch(() => {});
+      .catch(() => setCostError(true));
   }, [props.sceneId]);
 
   async function share() {
@@ -111,7 +112,9 @@ export function PauseMenu(props: {
         </Section>
 
         <Section title="Costs">
-          {!costs ? (
+          {costError ? (
+            <p className="text-sm text-paper/50">Costs couldn&apos;t load right now.</p>
+          ) : !costs ? (
             <div className="h-24 animate-pulse rounded-2xl bg-white/[0.06]" />
           ) : (
             <>

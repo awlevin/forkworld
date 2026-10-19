@@ -1,4 +1,4 @@
-import { and, eq, isNull, like, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNull, like, or, sql, type SQL } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { currentUserId } from "@/lib/user";
 import { getScene } from "@/lib/views";
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
       .from(c)
       .where(made)
       .groupBy(c.step, c.model, c.source)
-      .orderBy(sql`usd desc`),
+      .orderBy(desc(usd)),
     db.select({ usd }).from(c).where(exploring),
     db.select({ usd }).from(c).where(eq(c.worldId, scene.worldId)),
     userId ? db.select({ usd }).from(c).where(eq(c.userId, userId)) : Promise.resolve([{ usd: 0 }]),
