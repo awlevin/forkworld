@@ -11,6 +11,7 @@ import { segmentScene } from "@/lib/ai/segment";
 import { generateTransition } from "@/lib/ai/video";
 import type { Edge, Scene } from "@/db/schema";
 import type { EdgeStatus } from "@/lib/types";
+import { errorText, trace } from "@/lib/log";
 import { refundCredits, spendCredits, underGenerationLimit } from "@/lib/user";
 
 /** An edge that hasn't moved in this long was abandoned (its function died) and may be retried. */
@@ -110,6 +111,8 @@ export async function runEdge(edgeId: string) {
   const [edge] = await db.select().from(schema.edges).where(eq(schema.edges.id, edgeId));
   if (!edge) return;
   const ctx = { worldId: edge.worldId, sceneId: edge.fromSceneId, edgeId, userId: edge.createdBy };
+  const subject = `edge:${edgeId}`;
+  await trace(subject, "started", { action: edge.actionText, resume: { plan: !!edge.plan, scene: !!edge.toSceneId, video: !!edge.videoUrl } });
   let segmenting: Promise<unknown> = Promise.resolve();
 
   try {
@@ -126,6 +129,7 @@ export async function runEdge(edgeId: string) {
       const outcome = await planOutcome({ imageUrl: scene.imageUrl, object, action: edge.actionText, bible, storySoFar: scene.storySoFar, ctx });
       plan = { ...outcome, models: { llm: cfg.llm, image: cfg.image, video: cfg.video } };
       await setStatus(db, edgeId, "imaging", { narration: plan.narration, plan });
+      await trace(subject, "planned", { narration: plan.narration });
     }
 
     let next: Scene | undefined;
@@ -149,6 +153,7 @@ export async function runEdge(edgeId: string) {
         })
         .returning();
       await db.update(schema.edges).set({ toSceneId: id }).where(eq(schema.edges.id, edgeId));
+      await trace(subject, "keyframe ready", { scene: id });
     }
     if (next.segStatus !== "ready") segmenting = segmentAndSave(next);
 
@@ -165,9 +170,10 @@ export async function runEdge(edgeId: string) {
       await db.update(schema.edges).set({ videoUrl }).where(eq(schema.edges.id, edgeId));
     }
     await setStatus(db, edgeId, "ready");
+    await trace(subject, "ready");
   } catch (err) {
-    console.error("edge failed", edgeId, err);
-    await setStatus(db, edgeId, "failed", { error: err instanceof Error ? err.message.slice(0, 300) : "generation failed" });
+    await trace(subject, "failed", { error: errorText(err) }, "error");
+    await setStatus(db, edgeId, "failed", { error: "Something went wrong making this one. Try it again, or try something else." });
     await refundCredits(edge.createdBy, 1);
   }
   // Keep the function alive until the new scene is clickable.
@@ -190,8 +196,9 @@ export async function segmentAndSave(scene: Scene) {
       ctx: { worldId: scene.worldId, sceneId: scene.id },
     });
     await db.update(schema.scenes).set({ objects, segStatus: "ready" }).where(eq(schema.scenes.id, scene.id));
+    await trace(`scene:${scene.id}`, "segmented", { objects: objects.length });
   } catch (err) {
-    console.error("resegment failed", scene.id, err);
+    await trace(`scene:${scene.id}`, "segmentation failed", { error: errorText(err) }, "error");
     await db.update(schema.scenes).set({ segStatus: "failed" }).where(eq(schema.scenes.id, scene.id));
   }
 }

@@ -127,6 +127,21 @@ export const costs = pgTable(
   (t) => [index("costs_created_idx").on(t.createdAt)],
 );
 
+/** Progress and errors from background jobs, for /admin. */
+export const events = pgTable(
+  "events",
+  {
+    id: text("id").primaryKey(),
+    /** world:<id>, edge:<id> or scene:<id> */
+    subject: text("subject").notNull(),
+    level: text("level").notNull(),
+    message: text("message").notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("events_created_idx").on(t.createdAt), index("events_subject_idx").on(t.subject)],
+);
+
 export type World = typeof worlds.$inferSelect;
 export type Scene = typeof scenes.$inferSelect;
 export type Edge = typeof edges.$inferSelect;

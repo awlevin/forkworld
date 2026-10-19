@@ -6,6 +6,7 @@ import sharp from "sharp";
 import type { z } from "zod";
 import { logCost, type CostCtx } from "@/lib/cost";
 import { requireEnv } from "@/lib/env";
+import { withTimeout } from "@/lib/log";
 import { readBytes } from "@/lib/storage";
 import { aiConfig } from "./config";
 import { llmCost } from "./pricing";
@@ -51,7 +52,7 @@ export async function structured<S extends z.ZodType>(opts: {
   const images = await Promise.all((opts.images ?? []).map(imagePart));
   const messages: ModelMessage[] = [{ role: "user", content: [...images, { type: "text", text: user }] }];
   const started = Date.now();
-  const result = await generateText({
+  const result = await withTimeout(generateText({
     model: resolveModel(modelId),
     instructions: system,
     messages,
@@ -59,7 +60,7 @@ export async function structured<S extends z.ZodType>(opts: {
     // Reasoning models: keep latency down, these are short creative tasks.
     providerOptions: { openai: { reasoningEffort: "low" } },
     maxRetries: 2,
-  });
+  }), 120_000, `${opts.step} (${modelId})`);
   const inputTokens = result.usage.inputTokens ?? 0;
   const outputTokens = result.usage.outputTokens ?? 0;
   const reported = Number((result.providerMetadata?.gateway as { cost?: unknown } | undefined)?.cost);

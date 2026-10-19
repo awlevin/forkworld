@@ -26,6 +26,7 @@ export default async function Costs({ searchParams }: { searchParams: Promise<{ 
     .select({ n: sql<number>`count(distinct ${c.edgeId})::int`, usd: sql<number>`coalesce(sum(${c.usd}) filter (where ${c.edgeId} is not null), 0)::float` })
     .from(c)
     .where(gte(c.createdAt, since));
+  const recent = await db.select().from(schema.events).orderBy(desc(schema.events.createdAt)).limit(40);
   const total = byModel.reduce((s, r) => s + r.usd, 0);
   const money = (n: number) => `$${n.toFixed(n < 1 ? 3 : 2)}`;
 
@@ -39,6 +40,17 @@ export default async function Costs({ searchParams }: { searchParams: Promise<{ 
       <Table title="By step" rows={byStep.map((r) => [r.step, r.calls, `${(r.avgMs / 1000).toFixed(1)}s`, money(r.usd)])} />
       <Table title="By day" rows={byDay.map((r) => [r.day, "", "", money(r.usd)])} />
       <p className="mt-6 text-xs text-paper/40">Prices are estimates from src/lib/ai/pricing.ts.</p>
+      <section className="mt-8">
+        <h2 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-paper/50">Recent job events</h2>
+        <ul className="flex flex-col gap-2 text-xs">
+          {recent.map((e) => (
+            <li key={e.id} className={`rounded-xl p-2 ${e.level === "error" ? "bg-red-500/15" : "bg-white/5"}`}>
+              <span className="text-paper/50">{e.createdAt.toISOString().slice(11, 19)} {e.subject}</span> {e.message}
+              {e.data && <pre className="mt-1 whitespace-pre-wrap break-all text-paper/60">{JSON.stringify(e.data)}</pre>}
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }

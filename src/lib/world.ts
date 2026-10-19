@@ -7,6 +7,7 @@ import { getDb, schema } from "@/db";
 import { prepareSeed } from "@/lib/ai/keyframe";
 import { segmentScene } from "@/lib/ai/segment";
 import { generateWorldBible } from "@/lib/ai/world-bible";
+import { errorText, trace } from "@/lib/log";
 import { store } from "@/lib/storage";
 import { refundCredits } from "@/lib/user";
 import { curatedBySlug } from "@/worlds";
@@ -80,11 +81,14 @@ export async function setupWorld(worldId: string) {
   if (!world) return;
   const ctx = { worldId, userId: world.createdBy };
   const curated = world.slug ? curatedBySlug(world.slug) : undefined;
+  const subject = `world:${worldId}`;
+  await trace(subject, "setup started");
   try {
     const [bible, root] = await Promise.all([
       world.bible ? Promise.resolve(world.bible) : generateWorldBible(world.seedImageUrl, { ctx }),
       prepareSeed(world.seedImageUrl, `worlds/${worldId}/root-${nanoid(6)}`, ctx),
     ]);
+    await trace(subject, "bible and root image ready", { root: root.url });
     if (!bible.safe) {
       await db
         .update(schema.worlds)
@@ -117,11 +121,12 @@ export async function setupWorld(worldId: string) {
     });
     await db.update(schema.scenes).set({ objects, segStatus: "ready" }).where(eq(schema.scenes.id, sceneId));
     await db.update(schema.worlds).set({ status: "ready" }).where(eq(schema.worlds.id, worldId));
+    await trace(subject, "ready", { objects: objects.length });
   } catch (err) {
-    console.error("world setup failed", worldId, err);
+    await trace(subject, "setup failed", { error: errorText(err) }, "error");
     await db
       .update(schema.worlds)
-      .set({ status: "failed", error: err instanceof Error ? err.message.slice(0, 300) : "setup failed" })
+      .set({ status: "failed", error: "Something went wrong building this world. Open it again to retry." })
       .where(eq(schema.worlds.id, worldId));
     await refundCredits(world.createdBy, 1);
   }
