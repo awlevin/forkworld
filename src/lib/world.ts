@@ -8,6 +8,7 @@ import { prepareSeed } from "@/lib/ai/keyframe";
 import { segmentScene } from "@/lib/ai/segment";
 import { generateWorldBible } from "@/lib/ai/world-bible";
 import { store } from "@/lib/storage";
+import { refundCredits } from "@/lib/user";
 import { curatedBySlug } from "@/worlds";
 
 /** A world stuck in "creating" this long was abandoned (the function died); setup runs again. */
@@ -89,6 +90,7 @@ export async function setupWorld(worldId: string) {
         .update(schema.worlds)
         .set({ status: "rejected", error: "This picture can't be used. Try another one." })
         .where(eq(schema.worlds.id, worldId));
+      await refundCredits(world.createdBy, 1);
       return;
     }
     const sceneId = nanoid(12);
@@ -121,6 +123,7 @@ export async function setupWorld(worldId: string) {
       .update(schema.worlds)
       .set({ status: "failed", error: err instanceof Error ? err.message.slice(0, 300) : "setup failed" })
       .where(eq(schema.worlds.id, worldId));
+    await refundCredits(world.createdBy, 1);
   }
 }
 
