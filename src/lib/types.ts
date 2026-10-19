@@ -96,6 +96,4 @@ export type EdgeView = {
   toImageUrl: string | null;
   error: string | null;
   cached: boolean;
-  /** Seconds since the edge was created, for progress display. */
-  elapsed: number;
 };

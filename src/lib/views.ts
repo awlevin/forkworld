@@ -72,6 +72,5 @@ export async function getEdgeView(id: string, cached = false): Promise<EdgeView 
     toImageUrl: to?.imageUrl ?? null,
     error: stale ? "This one stalled. Try it again." : e.error,
     cached,
-    elapsed: Math.round((Date.now() - e.createdAt.getTime()) / 1000),
   };
 }
