@@ -20,8 +20,10 @@ Write:
   style, palette, brushwork and lighting of the reference image" plus the
   characters and objects that must remain recognisable. The result should be
   clearly different from the reference: something opened, moved, appeared,
-  transformed, or the camera moved closer or into a new space. Keep the same
-  aspect ratio. No text, captions, speech bubbles or UI in the image.
+  transformed, or the camera moved closer or into a new space. The frame is a
+  tall 9:16 portrait: compose for it, with the main subject in the middle
+  band and interesting things to tap spread top to bottom. No text, captions,
+  speech bubbles or UI in the image.
 - motionPrompt: one or two sentences for a video model animating from the
   current scene to the next: the main motion, and the camera move (push in,
   pan, orbit, or static). Keep it physically plausible over 4 to 6 seconds.

@@ -11,4 +11,4 @@ Variables: {{imagePrompt}}, {{artStyle}}, {{camera}}.
 
 Art style to preserve exactly: {{artStyle}}
 Camera: {{camera}}
-Keep the reference image's aspect ratio and composition logic. No text, letters, captions or UI.
+Tall 9:16 portrait frame. No text, letters, captions or UI.

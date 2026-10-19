@@ -15,7 +15,9 @@ every later scene must stay consistent with.
   image model could match it. Name a movement or artist only if the image is
   clearly in that style.
 - camera: how this image is framed (eye level, wide, slightly high, lens feel).
-  Later scenes keep this framing unless an action moves the viewer.
+  Every scene is shown as a tall 9:16 portrait frame on a phone, so describe
+  the framing as it would work in portrait. Later scenes keep this framing
+  unless an action moves the viewer.
 - characters: anyone visible, plus the player ("you") if it helps. Describe
   them visually so they can be redrawn consistently. Never identify real people
   by name.
