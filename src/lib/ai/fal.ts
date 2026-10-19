@@ -13,7 +13,7 @@ function fal() {
 }
 
 /** Longest any call to these models should take, queue time included. */
-const TIMEOUT_MS: Record<string, number> = { video: 240_000, segment: 60_000 };
+const TIMEOUT_MS: Record<string, number> = { video: 240_000, segment: 90_000 };
 
 /** Run a fal endpoint through its queue and log the cost. Inputs reference images by public Blob URL. */
 export async function runFal<T>(step: string, endpoint: string, input: Record<string, unknown>, ctx: CostCtx): Promise<T> {
@@ -27,7 +27,7 @@ export async function runFal<T>(step: string, endpoint: string, input: Record<st
       onEnqueue: (id) => (requestId = id),
       onQueueUpdate: (s) => (last = s.status === "IN_QUEUE" ? `IN_QUEUE at ${s.queue_position}` : s.status),
     }),
-    TIMEOUT_MS[step] ?? 120_000,
+    TIMEOUT_MS[step] ?? 240_000,
     endpoint,
   ).catch((err) => {
     throw new Error(`${endpoint} (request ${requestId || "not queued"}, last status ${last || "none"}): ${errorText(err)}`);
