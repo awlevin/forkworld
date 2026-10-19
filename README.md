@@ -17,8 +17,9 @@ Built mobile first: scenes are 9:16 and fill a phone screen.
    object while the next scene is generated (about a minute).
 3. The clip plays from the current scene into the new one, which is tappable
    when it ends. Repeat forever.
-4. "Your path" lists every scene from the start of the world; tap one to go
-   back. Every scene has its own URL, so the share button shares that moment.
+4. The pause button opens the pause screen: your path from the start of the
+   world (tap a scene to go back), the story so far, sharing, and what
+   everything cost. Every scene has its own URL, so sharing shares that moment.
 
 Start from a curated world, or upload any picture to start a new one.
 
@@ -39,12 +40,16 @@ Each step is its own module in `src/lib/ai/`, and its model is set in
 
 LLM calls go through the Vercel AI Gateway (no key needed on Vercel, billed
 to the Vercel team) unless `OPENAI_API_KEY` is set, in which case they call
-OpenAI directly with the same models.
+OpenAI directly with the same models. While the team is on the gateway's free
+tier, `LLM_MODEL` and `LLM_FAST_MODEL` are set in Vercel to
+`gateway:openai/gpt-5.4-nano`, the one capable model the free tier allows;
+delete them to go back to the defaults. `/api/admin/models?key=…&models=a,b`
+checks which models a deployment can call.
 
-Every upload is checked by the world bible step (its `safe` flag) and every
-typed action by the step 3 validator, which can also map it onto an existing
-action so it replays from cache. With `OPENAI_API_KEY`, OpenAI's free
-moderation endpoint runs first as well.
+There is no separate moderation step yet. The world bible flags unusable
+uploads (`safe`), and the step 3 validator rejects typed actions that break
+the content rules or the world, and maps them onto existing actions so they
+replay from cache.
 
 All LLM prompts are in [`prompts/`](prompts/README.md), one Markdown file per
 step, with the image and motion wrappers for steps 5 and 6.
@@ -78,9 +83,18 @@ paths and 4 uploads per player per hour.
 
 ## Costs
 
-`/admin/costs?key=$ADMIN_KEY` shows spend per model, per step and per day.
-Prices are estimates in `src/lib/ai/pricing.ts`, taken from the providers'
-pricing pages; edit them if yours differ. A new path costs about $0.50, mostly
+Every paid model call writes a row to `costs` with its step, model, units and
+dollar amount, and where that amount came from:
+
+- `gateway`: the charge the Vercel AI Gateway reports for that call.
+- `fal-price`: fal doesn't report a per-request cost, so this is the quantity
+  generated × your account's live unit price from fal's pricing API.
+- `list-price` / `table`: the published price in `src/lib/ai/pricing.ts`, used
+  only when the above aren't available.
+
+In the game, the pause screen shows what the current scene cost to make (step
+by step), this world, you, and everyone. `/admin/costs?key=$ADMIN_KEY` has the
+full breakdown per model, step and day, plus recent job events. A new path costs about $0.50, mostly
 the video ($0.40 for 4 s of Veo 3.1 Fast); the image is $0.08 and the LLM and
 SAM calls a few cents.
 
@@ -101,7 +115,7 @@ pnpm dev
 | Name | What for | Where to get it |
 | --- | --- | --- |
 | `FAL_KEY` (or `FAL_API_KEY`) | SAM 3, Nano Banana 2, Veo 3.1 | fal.ai → Dashboard → Keys |
-| `OPENAI_API_KEY` | Optional. Calls OpenAI directly and enables the moderation endpoint | platform.openai.com → API keys |
+| `OPENAI_API_KEY` | Optional. Calls OpenAI directly instead of through the AI Gateway | platform.openai.com → API keys |
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Postgres | Neon (set automatically by the Vercel Neon integration) |
 | `BLOB_READ_WRITE_TOKEN` | Images and videos | Vercel Blob (set automatically when the store is connected) |
 | `ADMIN_KEY` | Opens the cost dashboard | Any secret string |

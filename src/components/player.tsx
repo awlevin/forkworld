@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, sleep } from "@/lib/client";
 import type { ActionSuggestion, EdgeView, ExploredEdge, SceneView } from "@/lib/types";
 import { ActionSheet } from "./action-sheet";
 import { Generating } from "./generating";
-import { PathSheet } from "./path-sheet";
+import { PauseMenu } from "./pause-menu";
 import { Stage, type StagePhase } from "./stage";
 
 type Menu = { objectId: string; actions: ActionSuggestion[] | null; explored: ExploredEdge[]; error: string | null };
@@ -29,7 +28,7 @@ export function Player({ initial }: { initial: SceneView }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reveal, setReveal] = useState(false);
-  const [showPath, setShowPath] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const run = useRef(0);
 
@@ -166,9 +165,16 @@ export function Player({ initial }: { initial: SceneView }) {
       {exploring && (
         <header className="pt-safe pointer-events-none fixed inset-x-0 top-0 z-20 flex items-start justify-between gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-8">
           <div className="pointer-events-auto flex items-center gap-2">
-            <Link href="/" aria-label="Home" className="grid h-10 w-10 place-items-center rounded-full bg-black/45 backdrop-blur-md active:bg-black/70">
-              <ForkIcon />
-            </Link>
+            <button
+              onClick={() => setPaused(true)}
+              aria-label="Pause"
+              className="grid h-10 w-10 place-items-center rounded-full bg-black/45 backdrop-blur-md active:bg-black/70"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                <rect x="2" y="1.5" width="3.5" height="11" rx="1" />
+                <rect x="8.5" y="1.5" width="3.5" height="11" rx="1" />
+              </svg>
+            </button>
             {scene.parentSceneId && (
               <button
                 onClick={() => router.push(`/s/${scene.parentSceneId}`)}
@@ -181,35 +187,19 @@ export function Player({ initial }: { initial: SceneView }) {
               </button>
             )}
           </div>
-          <div className="pointer-events-auto flex items-center gap-2">
-            {credits !== null && (
-              <span className="rounded-full bg-black/45 px-3 py-2 text-xs font-semibold tabular-nums backdrop-blur-md" title="Credits for new paths">
-                ✦ {credits}
-              </span>
-            )}
-            <ShareButton />
-          </div>
+          {credits !== null && (
+            <span className="pointer-events-auto rounded-full bg-black/45 px-3 py-2 text-xs font-semibold tabular-nums backdrop-blur-md" title="Credits for new paths">
+              ✦ {credits}
+            </span>
+          )}
         </header>
       )}
 
       {exploring && !menu && (
         <footer className="pb-safe pointer-events-none fixed inset-x-0 bottom-0 z-20 flex items-end justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-3 pt-16">
-          <button
-            onClick={() => setShowPath(true)}
-            className="pointer-events-auto flex min-w-0 items-center gap-2 rounded-full bg-black/45 py-1.5 pl-1.5 pr-4 backdrop-blur-md active:bg-black/70"
-          >
-            <span className="flex -space-x-2">
-              {scene.path.slice(-3).map((p) => (
-                <img key={p.sceneId} src={p.imageUrl} alt="" className="h-8 w-[18px] rounded object-cover ring-2 ring-black/60" />
-              ))}
-            </span>
-            <span className="truncate text-left text-xs leading-tight">
-              <span className="block font-semibold">{scene.worldTitle}</span>
-              <span className="block text-paper/60">
-                {scene.depth === 0 ? "The beginning" : `${scene.depth} step${scene.depth === 1 ? "" : "s"} in`}
-              </span>
-            </span>
-          </button>
+          <span className="min-w-0 truncate text-xs text-paper/60">
+            {scene.depth === 0 ? scene.worldTitle : `${scene.worldTitle} · ${scene.depth} step${scene.depth === 1 ? "" : "s"} in`}
+          </span>
           <button
             onClick={() => setReveal((r) => !r)}
             aria-pressed={reveal}
@@ -263,7 +253,16 @@ export function Player({ initial }: { initial: SceneView }) {
         </p>
       )}
 
-      {showPath && <PathSheet path={scene.path} currentId={scene.id} storySoFar={scene.storySoFar} onClose={() => setShowPath(false)} />}
+      {paused && (
+        <PauseMenu
+          sceneId={scene.id}
+          worldTitle={scene.worldTitle}
+          path={scene.path}
+          storySoFar={scene.storySoFar}
+          credits={credits}
+          onClose={() => setPaused(false)}
+        />
+      )}
     </main>
   );
 }
@@ -283,44 +282,7 @@ function Toast({ children, onClose }: { children: React.ReactNode; onClose?: () 
   );
 }
 
-function ShareButton() {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      aria-label="Share this scene"
-      className="grid h-10 min-w-10 place-items-center rounded-full bg-black/45 px-3 text-xs font-semibold backdrop-blur-md active:bg-black/70"
-      onClick={async () => {
-        const url = window.location.href;
-        if (navigator.share) {
-          await navigator.share({ title: "Forkworld", url }).catch(() => {});
-        } else {
-          await navigator.clipboard.writeText(url);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        }
-      }}
-    >
-      {copied ? (
-        "Copied"
-      ) : (
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M8 10V2M5 5l3-3 3 3M3 9v4h10V9" />
-        </svg>
-      )}
-    </button>
-  );
-}
 
-function ForkIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-      <circle cx="8" cy="13.5" r="1.5" />
-      <circle cx="3.5" cy="2.5" r="1.5" />
-      <circle cx="12.5" cy="2.5" r="1.5" />
-      <path d="M8 12V8.5C8 6.5 3.5 6.5 3.5 4M8 8.5c0-2 4.5-2 4.5-4.5" />
-    </svg>
-  );
-}
 
 function preload(url: string) {
   return new Promise<void>((resolve) => {
