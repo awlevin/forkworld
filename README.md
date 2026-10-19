@@ -37,9 +37,14 @@ Each step is its own module in `src/lib/ai/`, and its model is set in
 | 6. Transition clip from the current scene to the keyframe | `video.ts` | `fal-ai/veo3.1/fast/first-last-frame-to-video` (4 s, 720p, no audio) |
 | 7. Segment the new scene, in parallel with step 6 | `segment.ts` | as step 2 |
 
-Moderation (uploads and typed actions) uses OpenAI's free moderation
-endpoint. Typed actions are also checked by the step 3 validator, which can
-map them onto an existing action so they replay from cache.
+LLM calls go through the Vercel AI Gateway (no key needed on Vercel, billed
+to the Vercel team) unless `OPENAI_API_KEY` is set, in which case they call
+OpenAI directly with the same models.
+
+Every upload is checked by the world bible step (its `safe` flag) and every
+typed action by the step 3 validator, which can also map it onto an existing
+action so it replays from cache. With `OPENAI_API_KEY`, OpenAI's free
+moderation endpoint runs first as well.
 
 All LLM prompts are in [`prompts/`](prompts/README.md), one Markdown file per
 step, with the image and motion wrappers for steps 5 and 6.
@@ -86,6 +91,7 @@ Requirements: Node 22+, pnpm 10.
 ```sh
 pnpm install
 cp .env.example .env.local   # fill in the keys below
+vercel env pull .env.local   # or: database, blob and AI Gateway credentials from the Vercel project
 pnpm db:migrate
 pnpm dev
 ```
@@ -94,8 +100,8 @@ pnpm dev
 
 | Name | What for | Where to get it |
 | --- | --- | --- |
-| `FAL_KEY` | SAM 3, Nano Banana 2, Veo 3.1 | fal.ai → Dashboard → Keys |
-| `OPENAI_API_KEY` | LLM steps and moderation | platform.openai.com → API keys |
+| `FAL_KEY` (or `FAL_API_KEY`) | SAM 3, Nano Banana 2, Veo 3.1 | fal.ai → Dashboard → Keys |
+| `OPENAI_API_KEY` | Optional. Calls OpenAI directly and enables the moderation endpoint | platform.openai.com → API keys |
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Postgres | Neon (set automatically by the Vercel Neon integration) |
 | `BLOB_READ_WRITE_TOKEN` | Images and videos | Vercel Blob (set automatically when the store is connected) |
 | `ADMIN_KEY` | Opens the cost dashboard | Any secret string |

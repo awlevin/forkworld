@@ -57,15 +57,16 @@ export async function structured<S extends z.ZodType>(opts: {
     messages,
     output: Output.object({ schema: opts.schema }),
     // Reasoning models: keep latency down, these are short creative tasks.
-    providerOptions: { openai: { reasoningEffort: opts.tier === "llmFast" ? "minimal" : "low" } },
+    providerOptions: { openai: { reasoningEffort: "low" } },
     maxRetries: 2,
   });
   const inputTokens = result.usage.inputTokens ?? 0;
   const outputTokens = result.usage.outputTokens ?? 0;
+  const reported = Number((result.providerMetadata?.gateway as { cost?: unknown } | undefined)?.cost);
   await logCost(opts.ctx, {
     step: opts.step,
     model: modelId,
-    usd: llmCost(modelId, inputTokens, outputTokens),
+    usd: Number.isFinite(reported) && reported > 0 ? reported : llmCost(modelId, inputTokens, outputTokens),
     units: { inputTokens, outputTokens },
     durationMs: Date.now() - started,
   });

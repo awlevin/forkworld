@@ -6,7 +6,8 @@ import { falCost } from "./pricing";
 
 let client: FalClient | undefined;
 function fal() {
-  client ??= createFalClient({ credentials: requireEnv("FAL_KEY", "fal.ai for segmentation, images and video") });
+  const key = process.env.FAL_KEY ?? process.env.FAL_API_KEY;
+  client ??= createFalClient({ credentials: key ?? requireEnv("FAL_KEY", "fal.ai for segmentation, images and video") });
   return client;
 }
 

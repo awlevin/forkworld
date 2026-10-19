@@ -6,9 +6,10 @@ import { aiConfig } from "./config";
 
 export type Moderation = { flagged: boolean; categories: string[] };
 
-/** OpenAI's moderation endpoint (free), for uploads and typed actions. */
+/** OpenAI's moderation endpoint (free), for uploads and typed actions. See aiConfig().moderation. */
 async function moderate(input: unknown, ctx: CostCtx): Promise<Moderation> {
   const model = aiConfig().moderation;
+  if (model === "llm") return { flagged: false, categories: [] };
   const started = Date.now();
   const res = await fetch("https://api.openai.com/v1/moderations", {
     method: "POST",
