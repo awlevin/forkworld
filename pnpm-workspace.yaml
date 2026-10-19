@@ -1,0 +1,7 @@
+onlyBuiltDependencies:
+  - sharp
+  - esbuild
+ignoredBuiltDependencies:
+  - unrs-resolver
+overrides:
+  napi-postinstall: 0.3.4
