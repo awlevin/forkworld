@@ -18,12 +18,19 @@ const TIMEOUT_MS: Record<string, number> = { video: 240_000, segment: 60_000 };
 /** Run a fal endpoint through its queue and log the cost. Inputs reference images by public Blob URL. */
 export async function runFal<T>(step: string, endpoint: string, input: Record<string, unknown>, ctx: CostCtx): Promise<T> {
   const started = Date.now();
+  let requestId = "";
+  let last = "";
   const result = await withTimeout(
-    fal().subscribe(endpoint, { input, pollInterval: 1000 }),
+    fal().subscribe(endpoint, {
+      input,
+      pollInterval: 1000,
+      onEnqueue: (id) => (requestId = id),
+      onQueueUpdate: (s) => (last = s.status === "IN_QUEUE" ? `IN_QUEUE at ${s.queue_position}` : s.status),
+    }),
     TIMEOUT_MS[step] ?? 120_000,
     endpoint,
   ).catch((err) => {
-    throw new Error(`${endpoint}: ${errorText(err)}`);
+    throw new Error(`${endpoint} (request ${requestId || "not queued"}, last status ${last || "none"}): ${errorText(err)}`);
   });
   const { usd, units } = falCost(endpoint, input);
   await logCost(ctx, { step, model: endpoint, usd, units, durationMs: Date.now() - started });
