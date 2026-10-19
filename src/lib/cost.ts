@@ -7,7 +7,15 @@ export type CostCtx = { worldId?: string; sceneId?: string; edgeId?: string; use
 
 export async function logCost(
   ctx: CostCtx,
-  entry: { step: string; model: string; usd: number; units?: Record<string, number>; durationMs?: number },
+  entry: {
+    step: string;
+    model: string;
+    usd: number;
+    /** gateway: the AI Gateway's reported charge. fal-price: fal's live unit price × quantity. list-price / table: published prices. */
+    source?: "gateway" | "fal-price" | "list-price" | "table" | "unknown";
+    units?: Record<string, number>;
+    durationMs?: number;
+  },
 ) {
   try {
     const db = getDb();
@@ -16,6 +24,7 @@ export async function logCost(
       step: entry.step,
       model: entry.model,
       usd: entry.usd,
+      source: entry.source ?? "table",
       units: entry.units,
       durationMs: entry.durationMs,
       worldId: ctx.worldId,

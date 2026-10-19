@@ -117,6 +117,8 @@ export const costs = pgTable(
     step: text("step").notNull(),
     model: text("model").notNull(),
     usd: numeric("usd", { precision: 12, scale: 6, mode: "number" }).notNull(),
+    /** Where the number comes from: gateway | fal-price | list-price | table. See logCost. */
+    source: text("source").notNull().default("table"),
     /** Tokens, seconds, images: whatever the price was computed from. */
     units: jsonb("units").$type<Record<string, number>>(),
     durationMs: real("duration_ms"),

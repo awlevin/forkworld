@@ -68,6 +68,7 @@ export async function structured<S extends z.ZodType>(opts: {
     step: opts.step,
     model: modelId,
     usd: Number.isFinite(reported) && reported > 0 ? reported : llmCost(modelId, inputTokens, outputTokens),
+    source: Number.isFinite(reported) && reported > 0 ? "gateway" : "table",
     units: { inputTokens, outputTokens },
     durationMs: Date.now() - started,
   });

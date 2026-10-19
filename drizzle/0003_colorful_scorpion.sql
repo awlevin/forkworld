@@ -1,0 +1,1 @@
+ALTER TABLE "costs" ADD COLUMN "source" text DEFAULT 'table' NOT NULL;

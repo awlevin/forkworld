@@ -22,37 +22,53 @@ export function llmCost(model: string, inputTokens = 0, outputTokens = 0) {
   return (inputTokens * i + outputTokens * o) / 1_000_000;
 }
 
-type FalPrice = (input: Record<string, unknown>) => { usd: number; units: Record<string, number> };
+/**
+ * What a fal call bills for. fal doesn't report the cost of a single request,
+ * so the cost log multiplies the quantity actually requested by the account's
+ * live unit price (fal-billing.ts), falling back to `listPrice` from the
+ * model's pricing page. `multiplier` covers options priced as a factor of the
+ * base unit (resolution, audio).
+ */
+export type FalUsage = { quantity: number; unit: "image" | "second" | "video" | "request"; multiplier: number; listPrice: number };
 
 const seconds = (d: unknown, fallback: number) => Number.parseFloat(String(d ?? fallback)) || fallback;
 
-/** USD per call for fal endpoints, from the request input. */
-const FAL_PRICES: Record<string, FalPrice> = {
-  "fal-ai/sam-3/image": () => ({ usd: 0.005, units: { requests: 1 } }),
-  "fal-ai/nano-banana-2/edit": (input) => {
-    const scale = { "0.5K": 0.75, "1K": 1, "2K": 1.5, "4K": 2 }[String(input.resolution ?? "1K")] ?? 1;
-    return { usd: 0.08 * scale, units: { images: 1 } };
-  },
-  "fal-ai/nano-banana-pro/edit": () => ({ usd: 0.15, units: { images: 1 } }),
-  "fal-ai/veo3.1/fast/first-last-frame-to-video": (input) => {
-    const s = seconds(input.duration, 8);
-    return { usd: s * (input.generate_audio ? 0.15 : 0.1), units: { seconds: s } };
-  },
-  "fal-ai/veo3.1/first-last-frame-to-video": (input) => {
-    const s = seconds(input.duration, 8);
-    return { usd: s * (input.generate_audio ? 0.4 : 0.2), units: { seconds: s } };
-  },
-  "fal-ai/kling-video/v2.1/pro/image-to-video": (input) => {
-    const s = seconds(input.duration, 5);
-    return { usd: 0.49 + Math.max(0, s - 5) * 0.098, units: { seconds: s } };
-  },
-  "fal-ai/kling-video/v3/pro/image-to-video": (input) => {
-    const s = seconds(input.duration, 5);
-    return { usd: s * (input.generate_audio ? 0.168 : 0.112), units: { seconds: s } };
-  },
-  "fal-ai/minimax/hailuo-02/pro/image-to-video": () => ({ usd: 0.48, units: { seconds: 6 } }),
+const FAL_USAGE: Record<string, (input: Record<string, unknown>) => FalUsage> = {
+  "fal-ai/sam-3/image": () => ({ quantity: 1, unit: "request", multiplier: 1, listPrice: 0.005 }),
+  "fal-ai/nano-banana-2/edit": (input) => ({
+    quantity: Number(input.num_images ?? 1),
+    unit: "image",
+    multiplier: { "0.5K": 0.75, "1K": 1, "2K": 1.5, "4K": 2 }[String(input.resolution ?? "1K")] ?? 1,
+    listPrice: 0.08,
+  }),
+  "fal-ai/nano-banana-pro/edit": (input) => ({ quantity: Number(input.num_images ?? 1), unit: "image", multiplier: 1, listPrice: 0.15 }),
+  "fal-ai/veo3.1/fast/first-last-frame-to-video": (input) => ({
+    quantity: seconds(input.duration, 8),
+    unit: "second",
+    multiplier: input.generate_audio ? 1.5 : 1,
+    listPrice: 0.1,
+  }),
+  "fal-ai/veo3.1/first-last-frame-to-video": (input) => ({
+    quantity: seconds(input.duration, 8),
+    unit: "second",
+    multiplier: input.generate_audio ? 2 : 1,
+    listPrice: 0.2,
+  }),
+  "fal-ai/kling-video/v2.1/pro/image-to-video": (input) => ({
+    quantity: 1,
+    unit: "video",
+    multiplier: 1 + Math.max(0, seconds(input.duration, 5) - 5) * 0.2,
+    listPrice: 0.49,
+  }),
+  "fal-ai/kling-video/v3/pro/image-to-video": (input) => ({
+    quantity: seconds(input.duration, 5),
+    unit: "second",
+    multiplier: input.generate_audio ? 1.5 : 1,
+    listPrice: 0.112,
+  }),
+  "fal-ai/minimax/hailuo-02/pro/image-to-video": () => ({ quantity: 6, unit: "second", multiplier: 1, listPrice: 0.08 }),
 };
 
-export function falCost(endpoint: string, input: Record<string, unknown>) {
-  return FAL_PRICES[endpoint]?.(input) ?? { usd: 0, units: {} };
+export function falUsage(endpoint: string, input: Record<string, unknown>): FalUsage | null {
+  return FAL_USAGE[endpoint]?.(input) ?? null;
 }

@@ -3,7 +3,8 @@ import { createFalClient, type FalClient } from "@fal-ai/client";
 import { logCost, type CostCtx } from "@/lib/cost";
 import { requireEnv } from "@/lib/env";
 import { errorText, withTimeout } from "@/lib/log";
-import { falCost } from "./pricing";
+import { falCallCost } from "./fal-billing";
+import { falUsage } from "./pricing";
 
 let client: FalClient | undefined;
 function fal() {
@@ -43,7 +44,7 @@ export async function runFal<T>(step: string, endpoint: string, input: Record<st
   ).catch((err) => {
     throw new Error(`${endpoint} (request ${requestId || "not queued"}, last status ${last || "none"}): ${errorText(err)}`);
   });
-  const { usd, units } = falCost(endpoint, input);
-  await logCost(ctx, { step, model: endpoint, usd, units, durationMs: Date.now() - started });
+  const { usd, units, source } = await falCallCost(endpoint, falUsage(endpoint, input));
+  await logCost(ctx, { step, model: endpoint, usd, units, source, durationMs: Date.now() - started });
   return result.data as T;
 }
