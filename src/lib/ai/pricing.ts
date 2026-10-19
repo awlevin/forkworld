@@ -26,8 +26,10 @@ export function llmCost(model: string, inputTokens = 0, outputTokens = 0) {
  * What a fal call bills for. fal doesn't report the cost of a single request,
  * so the cost log multiplies the quantity actually requested by the account's
  * live unit price (fal-billing.ts), falling back to `listPrice` from the
- * model's pricing page. `multiplier` covers options priced as a factor of the
- * base unit (resolution, audio).
+ * model's pricing page. fal's unit price is for the endpoint's default
+ * settings, so `listPrice` is too, and `multiplier` scales from those defaults
+ * to the options we send (resolution; Veo and Kling default to audio on, which
+ * we turn off).
  */
 export type FalUsage = { quantity: number; unit: "image" | "second" | "video" | "request"; multiplier: number; listPrice: number };
 
@@ -45,14 +47,14 @@ const FAL_USAGE: Record<string, (input: Record<string, unknown>) => FalUsage> = 
   "fal-ai/veo3.1/fast/first-last-frame-to-video": (input) => ({
     quantity: seconds(input.duration, 8),
     unit: "second",
-    multiplier: input.generate_audio ? 1.5 : 1,
-    listPrice: 0.1,
+    multiplier: input.generate_audio === false ? 0.1 / 0.15 : 1,
+    listPrice: 0.15,
   }),
   "fal-ai/veo3.1/first-last-frame-to-video": (input) => ({
     quantity: seconds(input.duration, 8),
     unit: "second",
-    multiplier: input.generate_audio ? 2 : 1,
-    listPrice: 0.2,
+    multiplier: input.generate_audio === false ? 0.5 : 1,
+    listPrice: 0.4,
   }),
   "fal-ai/kling-video/v2.1/pro/image-to-video": (input) => ({
     quantity: 1,
@@ -63,8 +65,8 @@ const FAL_USAGE: Record<string, (input: Record<string, unknown>) => FalUsage> = 
   "fal-ai/kling-video/v3/pro/image-to-video": (input) => ({
     quantity: seconds(input.duration, 5),
     unit: "second",
-    multiplier: input.generate_audio ? 1.5 : 1,
-    listPrice: 0.112,
+    multiplier: input.generate_audio === false ? 0.112 / 0.168 : 1,
+    listPrice: 0.168,
   }),
   "fal-ai/minimax/hailuo-02/pro/image-to-video": () => ({ quantity: 6, unit: "second", multiplier: 1, listPrice: 0.08 }),
 };
