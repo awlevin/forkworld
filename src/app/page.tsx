@@ -34,7 +34,7 @@ export default async function Home() {
             className="group relative block overflow-hidden rounded-3xl ring-1 ring-white/10 active:scale-[0.99]"
           >
             <img src={w.seed} alt="" className="h-72 w-full object-cover" />
-            <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/20 to-transparent p-4">
+            <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/90 via-black/45 to-transparent p-4">
               <h2 className="font-serif text-2xl text-paper">{w.title}</h2>
               <p className="mt-1 text-sm leading-snug text-paper/75">{w.blurb}</p>
               <span className="mt-3 self-start rounded-full bg-glow px-4 py-2 text-sm font-semibold text-ink">Enter</span>
