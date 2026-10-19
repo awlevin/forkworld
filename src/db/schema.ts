@@ -31,7 +31,7 @@ export const worlds = pgTable("worlds", {
   seedImageUrl: text("seed_image_url").notNull(),
   bible: jsonb("bible").$type<WorldBible>(),
   rootSceneId: text("root_scene_id"),
-  /** creating → ready | failed | rejected (moderation) */
+  /** creating → ready | failed | rejected (the world bible judged the picture unsafe) */
   status: text("status").notNull().default("creating"),
   error: text("error"),
   /** When the current setup attempt started; claimed atomically so only one runs. */
@@ -113,7 +113,7 @@ export const costs = pgTable(
   "costs",
   {
     id: text("id").primaryKey(),
-    /** world-bible | segment-propose | segment | segment-label | actions | validate | outcome | keyframe | video | moderation */
+    /** world-bible | segment-propose | segment | segment-label | actions | validate | outcome | keyframe | video */
     step: text("step").notNull(),
     model: text("model").notNull(),
     usd: numeric("usd", { precision: 12, scale: 6, mode: "number" }).notNull(),

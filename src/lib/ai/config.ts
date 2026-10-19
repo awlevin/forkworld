@@ -19,11 +19,5 @@ export function aiConfig() {
     segment: process.env.SEGMENT_MODEL ?? "fal-ai/sam-3/image",
     image: process.env.IMAGE_MODEL ?? "fal-ai/nano-banana-2/edit",
     video: process.env.VIDEO_MODEL ?? "fal-ai/veo3.1/fast/first-last-frame-to-video",
-    /**
-     * OpenAI's moderation endpoint needs an OpenAI key. Without one, the LLM
-     * checks that always run do the job: the world bible's `safe` flag for
-     * uploads and the action validator for typed actions.
-     */
-    moderation: process.env.OPENAI_API_KEY ? "omni-moderation-latest" : "llm",
   };
 }

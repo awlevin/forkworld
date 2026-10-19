@@ -56,7 +56,7 @@ export async function startSetup(worldId: string) {
   return claimed.length > 0;
 }
 
-/** A new world from an uploaded picture (already moderated and stored). */
+/** A new world from an uploaded picture (already stored). */
 export async function createUploadedWorld(opts: { seedImageUrl: string; createdBy: string; visibility: "public" | "unlisted" }) {
   const db = getDb();
   const id = nanoid(10);

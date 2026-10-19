@@ -2,7 +2,6 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { actionKey, validateAction } from "@/lib/ai/actions";
-import { moderateText } from "@/lib/ai/moderation";
 import { startEdge } from "@/lib/generate";
 import { currentUserId } from "@/lib/user";
 import { getEdgeView, getScene } from "@/lib/views";
@@ -46,8 +45,6 @@ export async function POST(req: Request) {
 
   if (!action) {
     const ctx = { worldId: scene.worldId, sceneId, userId };
-    const mod = await moderateText(parsed.data.action, ctx).catch(() => ({ flagged: false }));
-    if (mod.flagged) return Response.json({ error: "Let's keep this world friendly. Try something else." }, { status: 400 });
     const verdict = await validateAction({ input: parsed.data.action, object, bible: world.bible, existing: known, ctx });
     if (!verdict.ok) return Response.json({ error: verdict.reason }, { status: 400 });
     action = verdict.action;

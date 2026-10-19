@@ -1,4 +1,3 @@
-import { moderateImage } from "@/lib/ai/moderation";
 import { currentUserId, spendCredits, underUploadLimit } from "@/lib/user";
 import { createUploadedWorld, storeSeed } from "@/lib/world";
 
@@ -25,11 +24,6 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "That file doesn't look like a picture." }, { status: 400 });
   }
-  const mod = await moderateImage(bytes, { userId }).catch((err) => {
-    console.error("image moderation failed", err);
-    return { flagged: false };
-  });
-  if (mod.flagged) return Response.json({ error: "This picture can't be used. Try another one." }, { status: 400 });
   if (!(await spendCredits(userId, 1))) return Response.json({ error: "You're out of credits." }, { status: 402 });
 
   const worldId = await createUploadedWorld({
