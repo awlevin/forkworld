@@ -17,6 +17,8 @@ export function WorldLoading({ worldId, seedUrl }: { worldId: string; seedUrl: s
     let live = true;
     const started = Date.now();
     (async () => {
+      // Starts setup if nobody has (first visit to a curated world, or a retry after a failure).
+      await fetch(`/api/worlds/${worldId}/setup`, { method: "POST" }).catch(() => {});
       while (live) {
         const res = await fetch(`/api/worlds/${worldId}`, { cache: "no-store" }).then((r) => r.json()).catch(() => null);
         if (!live) return;
@@ -45,9 +47,16 @@ export function WorldLoading({ worldId, seedUrl }: { worldId: string; seedUrl: s
           {failed ? (
             <>
               <p className="mt-4 text-sm text-red-200">{w?.error ?? "Something went wrong building this world."}</p>
-              <Link href="/" className="mt-6 inline-block rounded-2xl bg-white/10 px-5 py-3 text-sm font-semibold">
-                Back home
-              </Link>
+              <div className="mt-6 flex justify-center gap-3">
+                {w?.status === "failed" && (
+                  <button onClick={() => window.location.reload()} className="rounded-2xl bg-glow px-5 py-3 text-sm font-semibold text-ink">
+                    Try again
+                  </button>
+                )}
+                <Link href="/" className="rounded-2xl bg-white/10 px-5 py-3 text-sm font-semibold">
+                  Back home
+                </Link>
+              </div>
             </>
           ) : (
             <>

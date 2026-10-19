@@ -1,0 +1,1 @@
+ALTER TABLE "worlds" ADD COLUMN "setup_started_at" timestamp with time zone;

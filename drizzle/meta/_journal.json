@@ -15,6 +15,13 @@
       "when": 1792418521189,
       "tag": "0001_high_electro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792419433166,
+      "tag": "0002_good_masque",
+      "breakpoints": true
     }
   ]
 }

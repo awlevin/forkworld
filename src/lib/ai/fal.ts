@@ -8,7 +8,11 @@ import { falCost } from "./pricing";
 let client: FalClient | undefined;
 function fal() {
   const key = process.env.FAL_KEY ?? process.env.FAL_API_KEY;
-  client ??= createFalClient({ credentials: key ?? requireEnv("FAL_KEY", "fal.ai for segmentation, images and video") });
+  client ??= createFalClient({
+    credentials: key ?? requireEnv("FAL_KEY", "fal.ai for segmentation, images and video"),
+    // Queue status is polled with identical GETs; Next must never serve those from its fetch cache.
+    fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+  });
   return client;
 }
 

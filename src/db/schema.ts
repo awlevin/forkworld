@@ -34,6 +34,8 @@ export const worlds = pgTable("worlds", {
   /** creating → ready | failed | rejected (moderation) */
   status: text("status").notNull().default("creating"),
   error: text("error"),
+  /** When the current setup attempt started; claimed atomically so only one runs. */
+  setupStartedAt: timestamp("setup_started_at", { withTimezone: true }),
   createdBy: text("created_by"),
   /** public: listed on the home page. unlisted: reachable by link only. */
   visibility: text("visibility").notNull().default("unlisted"),

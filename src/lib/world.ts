@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { after } from "next/server";
 import sharp from "sharp";
@@ -12,7 +12,7 @@ import { store } from "@/lib/storage";
 import { refundCredits } from "@/lib/user";
 import { curatedBySlug } from "@/worlds";
 
-/** A world stuck in "creating" this long was abandoned (the function died); setup runs again. */
+/** A setup attempt that hasn't finished in this long died with its function; another may start. */
 const STALE_SETUP_MS = 5 * 60 * 1000;
 
 export async function getWorld(id: string) {
@@ -21,39 +21,39 @@ export async function getWorld(id: string) {
   return w;
 }
 
-/** Curated worlds are created in the database on first visit. Returns the world row. */
+/** Curated worlds get a database row on first visit; setup starts when the loading screen asks for it. */
 export async function ensureCuratedWorld(slug: string) {
   const curated = curatedBySlug(slug);
   if (!curated) return null;
   const db = getDb();
   const id = `c-${slug}`;
-  const inserted = await db
+  await db
     .insert(schema.worlds)
-    .values({
-      id,
-      slug,
-      title: curated.title,
-      seedImageUrl: curated.seed,
-      bible: curated.bible,
-      visibility: "public",
-    })
-    .onConflictDoNothing()
-    .returning();
-  if (inserted.length) {
-    after(() => setupWorld(id));
-    return inserted[0];
-  }
-  const world = (await getWorld(id))!;
-  if (needsSetup(world)) {
-    await db.update(schema.worlds).set({ status: "creating", error: null, createdAt: new Date() }).where(eq(schema.worlds.id, id));
-    after(() => setupWorld(id));
-  }
-  return world;
+    .values({ id, slug, title: curated.title, seedImageUrl: curated.seed, bible: curated.bible, visibility: "public" })
+    .onConflictDoNothing();
+  return (await getWorld(id))!;
 }
 
-function needsSetup(w: typeof schema.worlds.$inferSelect) {
-  if (w.status === "failed") return true;
-  return w.status === "creating" && Date.now() - w.createdAt.getTime() > STALE_SETUP_MS;
+/**
+ * Start setup unless it is done or already running. The claim is one atomic
+ * update, so two visitors arriving together start it once. Call from route
+ * handlers only: jobs started during a page render share its fetch memoization.
+ */
+export async function startSetup(worldId: string) {
+  const db = getDb();
+  const claimed = await db
+    .update(schema.worlds)
+    .set({ status: "creating", error: null, setupStartedAt: new Date() })
+    .where(
+      and(
+        eq(schema.worlds.id, worldId),
+        inArray(schema.worlds.status, ["creating", "failed"]),
+        or(isNull(schema.worlds.setupStartedAt), lt(schema.worlds.setupStartedAt, new Date(Date.now() - STALE_SETUP_MS))),
+      ),
+    )
+    .returning({ id: schema.worlds.id });
+  if (claimed.length) after(() => setupWorld(worldId));
+  return claimed.length > 0;
 }
 
 /** A new world from an uploaded picture (already moderated and stored). */
@@ -67,7 +67,7 @@ export async function createUploadedWorld(opts: { seedImageUrl: string; createdB
     createdBy: opts.createdBy,
     visibility: opts.visibility,
   });
-  after(() => setupWorld(id));
+  await startSetup(id);
   return id;
 }
 
@@ -126,7 +126,7 @@ export async function setupWorld(worldId: string) {
     await trace(subject, "setup failed", { error: errorText(err) }, "error");
     await db
       .update(schema.worlds)
-      .set({ status: "failed", error: "Something went wrong building this world. Open it again to retry." })
+      .set({ status: "failed", error: "Something went wrong building this world.", setupStartedAt: null })
       .where(eq(schema.worlds.id, worldId));
     await refundCredits(world.createdBy, 1);
   }

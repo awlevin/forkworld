@@ -29,7 +29,7 @@ export async function readBytes(url: string): Promise<Buffer> {
     if (!file.startsWith(root + path.sep)) throw new Error("bad path");
     return readFile(file);
   }
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`);
   return Buffer.from(await res.arrayBuffer());
 }
