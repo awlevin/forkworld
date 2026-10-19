@@ -181,6 +181,18 @@ export function Stage(props: {
           {interactive && active && <Label object={active} />}
         </div>
       </div>
+      {/* The outlines are canvas-only; this list makes the objects reachable by screen readers and keyboards. */}
+      {interactive && props.objects.length > 0 && (
+        <ul className="sr-only" aria-label="Things in this scene">
+          {props.objects.map((o) => (
+            <li key={o.id}>
+              <button onPointerUp={(e) => e.stopPropagation()} onClick={() => props.onSelect(o.id)}>
+                {o.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
